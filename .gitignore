@@ -36,4 +36,4 @@ go.work
 ### Project Files ###
 /bad/
 /bin/
-MultiDiva-Config.yml
+MultiDiva_server_config.yml
