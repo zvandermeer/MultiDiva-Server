@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/spf13/viper"
+	"github.com/ovandermeer/MultiDiva-Server/internal/ConfigManager"
 )
 
 const (
@@ -23,17 +23,15 @@ var newClientNum int
 var serverQuitting bool
 
 func main() {
-	loadConfig()
+	myConfig := ConfigManager.LoadConfig()
 	fmt.Println("Server Running...")
 
-	server_port := viper.GetString("network.default_port")
-
-	server, err := net.Listen(SERVER_TYPE, SERVER_HOST+":"+server_port)
+	server, err := net.Listen(SERVER_TYPE, SERVER_HOST+":"+myConfig.Port)
 	if err != nil {
 		fmt.Println("Error listening:", err.Error())
 	}
 
-	fmt.Println("Listening on " + SERVER_HOST + ":" + server_port)
+	fmt.Println("Listening on " + SERVER_HOST + ":" + myConfig.Port)
 
 	clientsConnected = 0
 
@@ -147,37 +145,4 @@ func closeServer(server net.Listener, exitSignal chan os.Signal, channelList []c
 	}
 
 	server.Close()
-}
-
-func loadConfig() {
-	viper.SetConfigName("MultiDiva_server_config") // config file name without extension
-	viper.SetConfigType("yaml")
-	viper.AddConfigPath(".")
-
-	viper.SetDefault("default_port", "9988")
-	viper.SetDefault("max_rooms", 15)
-	viper.SetDefault("max_room_size", 6)
-	viper.SetDefault("max_concurrent_users", 100)
-
-	viper.SetDefault("config_version", 1)
-
-	usingConfig := true
-
-	if _, err := os.Stat("./MultiDiva_server_config.yml"); os.IsNotExist(err) {
-		fmt.Println("Error reading config: MultiDiva_server_config.yml does not exist. Attempting to create one...")
-		if _, err := os.Create("./MultiDiva_server_config.yml"); err != nil {
-			fmt.Println("Error creating MultiDiva_server_config.yml:", err)
-			usingConfig = false
-		} else {
-			viper.WriteConfigAs("./MultiDiva_server_config.yml")
-			fmt.Println("Config created successfully!")
-		}
-	}
-
-	if usingConfig {
-		err := viper.ReadInConfig()
-		if err != nil {
-			fmt.Println("Error reading config:", err)
-		}
-	}
 }
