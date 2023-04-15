@@ -1,6 +1,6 @@
-package DataTypes
+package dataTypes
 
-var CurrentConfigVersion int = 1
+var CurrentConfigVersion int = 2
 
 type ConfigData struct {
 	ConfigVersion      int    `yaml:"config_version"`
@@ -8,6 +8,7 @@ type ConfigData struct {
 	MaxConcurrentUsers int    `yaml:"max_concurrent_users"`
 	MaxRoomSize        int    `yaml:"max_room_size"`
 	MaxRoomCount       int    `yaml:"max_rooms"`
+	BindAddress        string `yaml:"bind_address"`
 }
 
 func NewConfigData() (config ConfigData) {
@@ -16,5 +17,6 @@ func NewConfigData() (config ConfigData) {
 	config.MaxConcurrentUsers = 100
 	config.MaxRoomSize = 6
 	config.MaxRoomCount = 15
+	config.BindAddress = "0.0.0.0"
 	return
 }
