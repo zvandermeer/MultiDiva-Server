@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net"
+	"strconv"
 	"strings"
 )
 
@@ -25,11 +26,21 @@ func newClient(c Client) {
 		case "clientLogout":
 			break
 		case "login":
-			c.Username = dat["username"].(string)
+			MajorClientVersion, _ := strconv.Atoi(dat["MajorClientVersion"].(string))
+			if MajorClientVersion == MajorServerVersion {
+				c.Username = dat["Username"].(string)
 
-			clients = append(clients, c)
+				clients = append(clients, c)
 
-			go clientListener(c)
+				go clientListener(c)
+			} else {
+				m := map[string]string{
+					"Instruction":        "versionMismatch",
+					"MajorServerVersion": strconv.Itoa(MajorServerVersion),
+				}
+
+				c.sendJsonMessage(m)
+			}
 
 		default:
 			c.sendInstruction("invalidLogin")
@@ -79,6 +90,11 @@ func (c Client) sendInstruction(instruction string) {
 	c.sendMessage([]byte("{\"Instruction\":\"" + instruction + "\"}"))
 }
 
-func (c Client) sendJsonMessage(message map[string]interface{}) {
+func (c Client) sendJsonMessage(message map[string]string) {
+	data, err := json.Marshal(message)
+	if err != nil {
+		fmt.Println(err)
+	}
 
+	c.sendMessage(data)
 }

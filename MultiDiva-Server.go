@@ -12,7 +12,8 @@ import (
 )
 
 const (
-	ServerVersion = "0.1"
+	MajorServerVersion = 0
+	MinorServerVersion = 1
 )
 
 var rooms []Room
@@ -23,7 +24,7 @@ var server net.Listener
 func main() {
 	var err error
 	myConfig := configManager.LoadConfig()
-	fmt.Println("MultiDiva " + ServerVersion + " server running!")
+	fmt.Println("MultiDiva " + strconv.Itoa(MajorServerVersion) + "." + strconv.Itoa(MinorServerVersion) + " server running!")
 
 	server, err = net.Listen("tcp", myConfig.BindAddress+":"+myConfig.Port)
 	if err != nil {
@@ -78,7 +79,9 @@ listenLoop:
 
 		switch instruction {
 		case "clientLogout":
-			rooms[c.RoomID].removeClient(c)
+			if c.RoomID != -1 {
+				rooms[c.RoomID].removeClient(c)
+			}
 
 			break listenLoop
 		case "createRoom":
