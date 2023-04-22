@@ -44,7 +44,6 @@ func newClient(c Client) {
 
 		default:
 			c.sendInstruction("invalidLogin")
-
 		}
 	} else {
 		c.sendInstruction("serverClosing")
@@ -65,7 +64,7 @@ func (c Client) getRawMessage() (clientMessageBytes []byte) {
 		clientMessageBytes = buffer[:clientMessage]
 	}
 
-	fmt.Println("Received: ", clientMessageBytes)
+	fmt.Println("Received: ", string(clientMessageBytes))
 	return
 }
 
@@ -80,6 +79,8 @@ func (c Client) getJsonMessage() (data map[string]interface{}) {
 }
 
 func (c Client) sendMessage(message []byte) {
+	fmt.Println("Writing: " + string(message))
+
 	_, err := c.Connection.Write(message)
 	if err != nil {
 		fmt.Println("Error writing:", err.Error())
