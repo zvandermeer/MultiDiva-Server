@@ -18,32 +18,34 @@ func newClient(c Client) {
 	if !serverQuitting {
 		dat := c.getJsonMessage()
 
-		instruction := dat["Instruction"].(string)
+		for i := range dat {
+			instruction := dat[i]["Instruction"].(string)
 
-		fmt.Println("FIRST INSTRUCTION: " + instruction)
+			fmt.Println("FIRST INSTRUCTION: " + instruction)
 
-		switch instruction {
-		case "clientLogout":
-			break
-		case "login":
-			MajorClientVersion, _ := strconv.Atoi(dat["MajorClientVersion"].(string))
-			if MajorClientVersion == MajorServerVersion {
-				c.Username = dat["Username"].(string)
+			switch instruction {
+			case "clientLogout":
+				break
+			case "login":
+				MajorClientVersion, _ := strconv.Atoi(dat[i]["MajorClientVersion"].(string))
+				if MajorClientVersion == MajorServerVersion {
+					c.Username = dat[i]["Username"].(string)
 
-				clients = append(clients, c)
+					clients = append(clients, c)
 
-				go clientListener(c)
-			} else {
-				m := map[string]string{
-					"Instruction":        "versionMismatch",
-					"MajorServerVersion": strconv.Itoa(MajorServerVersion),
+					go clientListener(c)
+				} else {
+					m := map[string]string{
+						"Instruction":        "versionMismatch",
+						"MajorServerVersion": strconv.Itoa(MajorServerVersion),
+					}
+
+					c.sendJsonMessage(m)
 				}
 
-				c.sendJsonMessage(m)
+			default:
+				c.sendInstruction("invalidLogin")
 			}
-
-		default:
-			c.sendInstruction("invalidLogin")
 		}
 	} else {
 		c.sendInstruction("serverClosing")
@@ -68,11 +70,38 @@ func (c Client) getRawMessage() (clientMessageBytes []byte) {
 	return
 }
 
-func (c Client) getJsonMessage() (data map[string]interface{}) {
+func (c Client) getJsonMessage() (returnData []map[string]interface{}) {
 	clientMessageBytes := c.getRawMessage()
 
-	if err := json.Unmarshal(clientMessageBytes, &data); err != nil {
-		panic(err)
+	clientMessageString := string(clientMessageBytes)
+	var messages []string
+	messages = append(messages, clientMessageString)
+
+	// Sometimes, if the client sends multiple messages too fast, the server reads multiple instructions as one.
+	// This cause the json unmarshal to panic, and crash the server. Solution, split the message by closing braces.
+	// This isn't the best solution, but it works so
+	if strings.Count(clientMessageString, "}") > 1 {
+		fmt.Println("FAILURE")
+		fmt.Println(messages)
+		messages = strings.Split(clientMessageString, "}")
+		messages = messages[:len(messages)-1]
+		fmt.Println("POST")
+		fmt.Println(messages)
+		for i := range messages {
+			messages[i] += "}"
+		}
+		fmt.Println("POST POST")
+		fmt.Println(messages)
+	}
+
+	for i := range messages {
+		var data map[string]interface{}
+
+		if err := json.Unmarshal([]byte(messages[i]), &data); err != nil {
+			panic(err)
+		}
+
+		returnData = append(returnData, data)
 	}
 
 	return

@@ -1,9 +1,5 @@
 package main
 
-import (
-	"fmt"
-)
-
 type Room struct {
 	RoomTitle         string
 	PublicRoom        bool
@@ -31,26 +27,26 @@ func newSecureRoom(roomName string, publicRoom bool, leader Client, password str
 	rooms = append(rooms, r)
 }
 
-func (r Room) sendToOthersInRoom(message []byte, c Client) {
+func (r *Room) sendToOthersInRoom(message []byte, c Client) {
 	for i := range r.Members {
-		if r.Members[i] != c {
+		if r.Members[i].Connection != c.Connection {
 			r.Members[i].sendMessage(message)
 		}
 	}
 }
 
-func (r Room) sendToAllInRoom(message []byte) {
+func (r *Room) sendToAllInRoom(message []byte) {
 	for i := range r.Members {
 		r.Members[i].sendMessage(message)
 	}
 }
 
-func (r Room) removeClient(c Client) {
+func (r *Room) removeClient(c Client) {
 	for i := range r.Members {
 		if r.Members[i].Connection == c.Connection { // Testing for connection because it's something static for a client, that is also unique to it
 			r.Members[i] = r.Members[len(r.Members)-1]
 			r.Members = r.Members[:len(r.Members)-1]
-			fmt.Println(r.Members)
+			break
 		}
 	}
 }
