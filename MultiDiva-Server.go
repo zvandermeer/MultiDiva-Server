@@ -3,11 +3,12 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/ovandermeer/MultiDiva-Server/internal/configManager"
 	"net"
 	"os"
 	"os/signal"
 	"strconv"
+
+	"github.com/ovandermeer/MultiDiva-Server/internal/configManager"
 )
 
 const (
@@ -100,9 +101,9 @@ listenLoop:
 				foundRoom := false
 
 				if c.RoomID == -1 {
-					for i := range rooms {
-						if rooms[i].RoomTitle == dat[i]["roomName"] {
-							rooms[i].Members = append(rooms[i].Members, c)
+					for j := range rooms {
+						if rooms[j].RoomTitle == dat[i]["roomName"] {
+							rooms[j].Members = append(rooms[i].Members, c)
 							foundRoom = true
 
 							c.RoomID = i
@@ -112,7 +113,21 @@ listenLoop:
 					}
 
 					if !foundRoom {
-						c.sendInstruction("roomNotFound")
+						m := map[string]string{
+							"Instruction": "roomConnectionUpdate",
+							"Status":      "roomNotFound",
+							"RoomName":    dat[i]["roomName"].(string),
+						}
+
+						c.sendJsonMessage(m)
+					} else {
+						m := map[string]string{
+							"Instruction": "roomConnectionUpdate",
+							"Status":      "connectedToRoom",
+							"RoomName":    dat[i]["roomName"].(string),
+						}
+
+						c.sendJsonMessage(m)
 					}
 				}
 			case "note":

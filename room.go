@@ -10,6 +10,19 @@ type Room struct {
 }
 
 func newRoom(roomName string, publicRoom bool, leader *Client) {
+	for i := range rooms {
+		if rooms[i].RoomTitle == roomName {
+			m := map[string]string{
+				"Instruction": "roomConnectionUpdate",
+				"Status":      "roomAlreadyExists",
+				"RoomName":    roomName,
+			}
+
+			leader.sendJsonMessage(m)
+			break
+		}
+	}
+
 	r := Room{roomName, publicRoom, false, "", *leader, make([]Client, 0)}
 
 	r.Members = append(r.Members, *leader)
@@ -18,7 +31,13 @@ func newRoom(roomName string, publicRoom bool, leader *Client) {
 
 	leader.RoomID = len(rooms) - 1
 
-	// TODO make sure that room name isn't taken
+	m := map[string]string{
+		"Instruction": "roomConnectionUpdate",
+		"Status":      "connectedAsLeader",
+		"RoomName":    roomName,
+	}
+
+	leader.sendJsonMessage(m)
 }
 
 func newSecureRoom(roomName string, publicRoom bool, leader Client, password string) {

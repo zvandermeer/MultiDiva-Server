@@ -34,10 +34,13 @@ func newClient(c Client) {
 					clients = append(clients, c)
 
 					go clientListener(c)
+
+					c.sendInstruction("loginSuccess")
 				} else {
 					m := map[string]string{
 						"Instruction":        "versionMismatch",
 						"MajorServerVersion": strconv.Itoa(MajorServerVersion),
+						"MinorServerVersion": strconv.Itoa(MinorServerVersion),
 					}
 
 					c.sendJsonMessage(m)
