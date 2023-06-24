@@ -6,6 +6,7 @@ import (
 	"net"
 	"os"
 	"os/signal"
+	"sort"
 	"strconv"
 
 	"github.com/ovandermeer/MultiDiva-Server/internal/configManager"
@@ -16,10 +17,17 @@ const (
 	MinorServerVersion = 1
 )
 
+type rankingData struct {
+	client net.Conn
+	score  int
+}
+
 var rooms []Room
 var clients []Client
 var serverQuitting bool
 var server net.Listener
+
+var playerRanking []rankingData
 
 func main() {
 	var err error
@@ -91,6 +99,7 @@ listenLoop:
 				}
 
 				break listenLoop
+
 			case "createRoom":
 				if dat[i]["passwordProtected"] == "false" {
 					publicRoom, _ := strconv.ParseBool(dat[i]["publicRoom"].(string))
@@ -130,21 +139,57 @@ listenLoop:
 						c.sendJsonMessage(m)
 					}
 				}
+
 			case "note":
 				if c.RoomID != -1 {
-					messageToSend, err := json.Marshal(dat[i])
-					if err != nil {
-						panic(err)
+					initialPos := -1
+
+					for j := range playerRanking {
+						if playerRanking[j].client == c.Connection {
+							initialPos = j
+							break
+						}
 					}
-					rooms[c.RoomID].sendToOthersInRoom(messageToSend, c)
+
+					if initialPos != -1 {
+						playerRanking[initialPos].score, _ = strconv.Atoi(dat[i]["Score"].(string))
+
+						sort.Slice(playerRanking, func(i, j int) bool {
+							return playerRanking[i].score > playerRanking[j].score
+						})
+
+						finalPos := -1
+
+						for j := range playerRanking {
+							if playerRanking[j].client == c.Connection {
+								finalPos = j
+								break
+							}
+						}
+
+						if finalPos != -1 {
+							dat[i]["ranking"] = finalPos
+
+							messageToSend, err := json.Marshal(dat[i])
+							if err != nil {
+								panic(err)
+							}
+							rooms[c.RoomID].sendToOthersInRoom(messageToSend, c)
+						} else {
+							fmt.Println("Error, unable to rank player. Error code: 02")
+						}
+
+					} else {
+						fmt.Println("Error, unable to rank player. Error code: 01")
+					}
 				}
+
 			case "leaveRoom":
 				if c.RoomID != -1 {
 					rooms[c.RoomID].removeClient(c)
 				}
 			}
 		}
-
 	}
 }
 

@@ -33,6 +33,8 @@ func newClient(c Client) {
 
 					clients = append(clients, c)
 
+					playerRanking = append(playerRanking, rankingData{c.Connection, 0})
+
 					go clientListener(c)
 
 					c.sendInstruction("loginSuccess")
