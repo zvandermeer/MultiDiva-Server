@@ -20,6 +20,8 @@ const (
 type rankingData struct {
 	client net.Conn
 	score  int
+	combo  string
+	health string
 }
 
 var rooms []Room
@@ -168,13 +170,35 @@ listenLoop:
 						}
 
 						if finalPos != -1 {
-							dat[i]["ranking"] = finalPos
+							dat[i]["ranking"] = strconv.Itoa(finalPos)
 
 							messageToSend, err := json.Marshal(dat[i])
 							if err != nil {
 								panic(err)
 							}
-							rooms[c.RoomID].sendToOthersInRoom(messageToSend, c)
+							rooms[c.RoomID].sendToAllInRoom(messageToSend)
+
+							if finalPos < initialPos {
+								diff := initialPos - finalPos
+								k := 1
+								for k <= diff {
+									m := map[string]string{
+										"Instruction": "note",
+										"Combo":       playerRanking[finalPos+k].combo,
+										"Grade":       "1",
+										"Score":       strconv.Itoa(playerRanking[finalPos+k].score),
+										"ranking":     strconv.Itoa(finalPos + k),
+									}
+
+									messageToSend, err := json.Marshal(m)
+									if err != nil {
+										panic(err)
+									}
+									rooms[c.RoomID].sendToAllInRoom(messageToSend)
+									k++
+								}
+							}
+
 						} else {
 							fmt.Println("Error, unable to rank player. Error code: 02")
 						}
