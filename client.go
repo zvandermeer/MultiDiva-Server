@@ -104,9 +104,9 @@ func (c Client) getJsonMessage() (returnData []map[string]interface{}) {
 
 		if err := json.Unmarshal([]byte(messages[i]), &data); err != nil {
 			panic(err)
+		} else {
+			returnData = append(returnData, data)
 		}
-
-		returnData = append(returnData, data)
 	}
 
 	return
