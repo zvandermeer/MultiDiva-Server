@@ -1,62 +1,66 @@
 package main
 
+import (
+	"sort"
+	"time"
+
+	"github.com/google/uuid"
+)
+
+type RankingData struct {
+	ClientUUID string
+	score      int // Make goroutine every 500ms update rankings
+}
+
 type Room struct {
+	RoomUUID          string
 	RoomTitle         string
-	PublicRoom        bool
 	PasswordProtected bool
 	Password          string // TODO make this more secure
-	Leader            Client
-	Members           []Client
+	Leader            *Client
+	Members           []*Client
+	Ranking           []RankingData
+	GameRunning       bool
 }
 
-func newRoom(roomName string, publicRoom bool, leader *Client) {
-	for i := range rooms {
-		if rooms[i].RoomTitle == roomName {
-			m := map[string]string{
-				"Instruction": "roomConnectionUpdate",
-				"Status":      "roomAlreadyExists",
-				"RoomName":    roomName,
-			}
+func newRoom(roomName string, leader *Client) *Room {
+	r := Room{}
 
-			leader.sendJsonMessage(m)
-			break
-		}
-	}
+	r.RoomUUID = uuid.NewString()
+	r.RoomTitle = roomName
+	r.PasswordProtected = false
+	r.Leader = leader
 
-	r := Room{roomName, publicRoom, false, "", *leader, make([]Client, 0)}
+	r.Members = append(r.Members, leader)
 
-	r.Members = append(r.Members, *leader)
-
-	rooms = append(rooms, r)
-
-	leader.RoomID = len(rooms) - 1
-
-	m := map[string]string{
-		"Instruction": "roomConnectionUpdate",
-		"Status":      "connectedAsLeader",
-		"RoomName":    roomName,
-	}
-
-	leader.sendJsonMessage(m)
+	return &r
 }
 
-func newSecureRoom(roomName string, publicRoom bool, leader Client, password string) {
-	r := Room{roomName, publicRoom, true, password, leader, make([]Client, 0)}
+func newProtectedRoom(roomName string, leader *Client, password string) *Room {
+	r := Room{}
 
-	rooms = append(rooms, r)
+	r.RoomUUID = uuid.NewString()
+	r.RoomTitle = roomName
+	r.PasswordProtected = true
+	r.Password = password
+	r.Leader = leader
+
+	r.Members = append(r.Members, leader)
+
+	return &r
 }
 
-func (r *Room) sendToOthersInRoom(message []byte, c Client) {
-	for i := range r.Members {
-		if r.Members[i].Connection != c.Connection {
-			r.Members[i].sendMessage(message)
+func (r Room) sendToOthersInRoom(message []byte, c Client) {
+	for _, Member := range r.Members {
+		if Member.ClientUUID != c.ClientUUID {
+			Member.OutgoingMessageBuffer <- message
 		}
 	}
 }
 
-func (r *Room) sendToAllInRoom(message []byte) {
-	for i := range r.Members {
-		r.Members[i].sendMessage(message)
+func (r Room) sendToAllInRoom(message []byte) {
+	for _, Member := range r.Members {
+		Member.OutgoingMessageBuffer <- message
 	}
 }
 
@@ -67,5 +71,19 @@ func (r *Room) removeClient(c Client) {
 			r.Members = r.Members[:len(r.Members)-1]
 			break
 		}
+	}
+}
+
+func (r *Room) updateRankings() {
+	for {
+		if(!r.GameRunning) {
+			break
+		}
+
+		time.Sleep(100 * time.Millisecond)
+
+		sort.Slice(r.Ranking, func(i, j int) bool {
+			return r.Ranking[i].score > r.Ranking[j].score
+		  })
 	}
 }
